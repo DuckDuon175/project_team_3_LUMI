@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "eventman.h"
 #include "led.h"
+#include "eventbutton.h"
 #include "button.h"
 #include "Ucglib.h"
 #include <stdint.h>
@@ -61,8 +62,10 @@ static ucg_t ucg;
 static Snake snake;
 static Point food;
 static state_app_t eCurrentState;
+static char srcScore[20]="";
+static uint8_t score = 0; // Khởi tạo điểm số ban đầu là 0
 static uint8_t gameOverFlag = 0;
-
+static void LoadConfiguration(void);
 void Snake_Init();
 void Snake_Move();
 void Snake_GenerateFood();
@@ -70,30 +73,42 @@ int Snake_CheckCollision();
 void Snake_Draw();
 void Snake_GameOver();
 
+static void LoadConfiguration(void) {
+	Ucglib4WireSWSPI_begin(&ucg, UCG_FONT_MODE_SOLID);
+	int width = ucg_GetWidth(&ucg);
+	int heightRemain = (ucg_GetHeight(&ucg) - 3)/2;
+	ucg_ClearScreen(&ucg);
+	ucg_SetFont(&ucg, ucg_font_helvR08_tr);
+	ucg_SetRotate180(&ucg);
+	ucg_DrawString(&ucg, (width - ucg_GetStrWidth(&ucg, "Snake Game"))/2, heightRemain - 14, 0, "Snake Game");
+	ucg_DrawString(&ucg, (width - ucg_GetStrWidth(&ucg, "Programming by"))/2, heightRemain, 0, "Programming by");
+	ucg_DrawString(&ucg, (width - ucg_GetStrWidth(&ucg, "Lumi Smarthome"))/2, heightRemain + 14, 0, "Lumi Smarthome");
+	ucg_DrawString(&ucg, (width - ucg_GetStrWidth(&ucg, "Group 3"))/2, heightRemain + 28, 0, "Group 3");
+}
 void DeviceStateMachine(uint8_t event) {
     switch(event) {
-        case EVENT_BUTTON_5_PRESS_LOGIC: // Di chuyển lên
+        case EVENT_BUTTON_1_PRESS_LOGIC: // Di chuyển lên
             if (snake.direction.y != 1) { // Ngăn di chuyển ngược hướng xuống
                 snake.direction.x = 0;
                 snake.direction.y = -1;
             }
             break;
 
-        case EVENT_BUTTON_4_PRESS_LOGIC: // Di chuyển trái
+        case EVENT_BUTTON_2_PRESS_LOGIC: // Di chuyển trái
             if (snake.direction.x != 1) { // Ngăn di chuyển ngược hướng phải
                 snake.direction.x = -1;
                 snake.direction.y = 0;
             }
             break;
 
-        case EVENT_BUTTON_2_PRESS_LOGIC: // Di chuyển phải
+        case EVENT_BUTTON_4_PRESS_LOGIC: // Di chuyển phải
             if (snake.direction.x != -1) { // Ngăn di chuyển ngược hướng trái
                 snake.direction.x = 1;
                 snake.direction.y = 0;
             }
             break;
 
-        case EVENT_BUTTON_1_PRESS_LOGIC: // Di chuyển xuống
+        case EVENT_BUTTON_5_PRESS_LOGIC: // Di chuyển xuống
             if (snake.direction.y != -1) { // Ngăn di chuyển ngược hướng lên
                 snake.direction.x = 0;
                 snake.direction.y = 1;
@@ -103,15 +118,14 @@ void DeviceStateMachine(uint8_t event) {
         default:
             break;
     }
-
     if (!gameOverFlag) {
-        Snake_Move();
-        if (Snake_CheckCollision()) {
-            Snake_GameOver();
-        }
-        Snake_Draw();
-    }
-}
+           Snake_Move();
+           if (Snake_CheckCollision()) {
+               Snake_GameOver();
+           }
+           Snake_Draw();
+       }
+   }
 
 void Snake_Init() {
     snake.length = 4;
@@ -135,6 +149,7 @@ void Snake_Move() {
     // Check if the snake eats the food
     if (snake.position[0].x == food.x && snake.position[0].y == food.y) {
         snake.length++;
+        score++;
         Snake_GenerateFood();
     }
 }
@@ -164,7 +179,8 @@ int Snake_CheckCollision() {
 
 void Snake_Draw() {
     ucg_ClearScreen(&ucg);
-
+    ucg_SetFont(&ucg, ucg_font_helvR08_tr);
+    ucg_SetRotate180(&ucg);
     // Draw the snake
     for (int i = 0; i < snake.length; i++) {
         ucg_DrawBox(&ucg, snake.position[i].x * 8, snake.position[i].y * 8, 8, 8);
@@ -173,16 +189,34 @@ void Snake_Draw() {
     // Draw the food
     ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 8, 8);
 
+    //Draw the frame
     ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * CELL_WIDTH, GRID_HEIGHT * CELL_HEIGHT);
+
+    //Score
+    int height = ucg_GetHeight(&ucg)/10;
+	memset(srcScore, 0, sizeof(srcScore));
+	sprintf(srcScore, " Score: %d", score);
+	ucg_DrawString(&ucg, 0, height + 108, 0, srcScore);
 }
 
 void Snake_GameOver() {
     gameOverFlag = 1;
+
+    // Clear the entire screen
     ucg_ClearScreen(&ucg);
+
+    // Display the "Game Over" message
     ucg_SetFont(&ucg, ucg_font_helvR08_tr);
     ucg_SetRotate180(&ucg);
+
+    // Hiển thị "Game Over" ở giữa màn hình
     ucg_DrawString(&ucg, (ucg_GetWidth(&ucg) - ucg_GetStrWidth(&ucg, "Game Over")) / 2, ucg_GetHeight(&ucg) / 2, 0, "Game Over");
+
+    // Hiển thị điểm số cuối cùng ngay dưới "Game Over"
+    ucg_DrawString(&ucg, (ucg_GetWidth(&ucg) - ucg_GetStrWidth(&ucg, srcScore)) / 2, (ucg_GetHeight(&ucg) / 2) + 14, 0, srcScore);
+
 }
+
 
 static state_app_t GetStateApp(void) {
     return eCurrentState;
@@ -196,7 +230,7 @@ static void AppStateManager(uint8_t event) {
     switch(GetStateApp()) {
         case STATE_APP_STARTUP:
             if(event == EVENT_APP_INIT) {
-                Ucglib4WireSWSPI_begin(&ucg, UCG_FONT_MODE_SOLID);
+                LoadConfiguration();
                 Snake_Init();
                 SetStateApp(STATE_APP_IDLE);
             }
