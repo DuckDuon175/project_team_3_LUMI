@@ -12,6 +12,8 @@
 #define GRID_WIDTH     16
 #define GRID_HEIGHT    10
 #define SNAKE_MAX_LENGTH (GRID_WIDTH * GRID_HEIGHT)
+#define CELL_WIDTH     10  // Độ rộng của mỗi ô trên lưới
+#define CELL_HEIGHT    10  // Chiều cao của mỗi ô trên lưới
 
 #define GPIO_PIN_LOW   0
 #define GPIO_PIN_HIGH  1
@@ -70,29 +72,29 @@ void Snake_GameOver();
 
 void DeviceStateMachine(uint8_t event) {
     switch(event) {
-        case EVENT_BUTTON_1_PRESS_LOGIC: // Move up
-            if (snake.direction.y != 1) { // Prevent moving in the opposite direction
+        case EVENT_BUTTON_5_PRESS_LOGIC: // Di chuyển lên
+            if (snake.direction.y != 1) { // Ngăn di chuyển ngược hướng xuống
                 snake.direction.x = 0;
                 snake.direction.y = -1;
             }
             break;
 
-        case EVENT_BUTTON_2_PRESS_LOGIC: // Move left
-            if (snake.direction.x != 1) { // Prevent moving in the opposite direction
+        case EVENT_BUTTON_4_PRESS_LOGIC: // Di chuyển trái
+            if (snake.direction.x != 1) { // Ngăn di chuyển ngược hướng phải
                 snake.direction.x = -1;
                 snake.direction.y = 0;
             }
             break;
 
-        case EVENT_BUTTON_4_PRESS_LOGIC: // Move right
-            if (snake.direction.x != -1) { // Prevent moving in the opposite direction
+        case EVENT_BUTTON_2_PRESS_LOGIC: // Di chuyển phải
+            if (snake.direction.x != -1) { // Ngăn di chuyển ngược hướng trái
                 snake.direction.x = 1;
                 snake.direction.y = 0;
             }
             break;
 
-        case EVENT_BUTTON_5_PRESS_LOGIC: // Move down
-            if (snake.direction.y != -1) { // Prevent moving in the opposite direction
+        case EVENT_BUTTON_1_PRESS_LOGIC: // Di chuyển xuống
+            if (snake.direction.y != -1) { // Ngăn di chuyển ngược hướng lên
                 snake.direction.x = 0;
                 snake.direction.y = 1;
             }
@@ -112,7 +114,7 @@ void DeviceStateMachine(uint8_t event) {
 }
 
 void Snake_Init() {
-    snake.length = 1;
+    snake.length = 4;
     snake.position[0].x = GRID_WIDTH / 2;
     snake.position[0].y = GRID_HEIGHT / 2;
     snake.direction.x = 0;
@@ -170,6 +172,8 @@ void Snake_Draw() {
 
     // Draw the food
     ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 8, 8);
+
+    ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * CELL_WIDTH, GRID_HEIGHT * CELL_HEIGHT);
 }
 
 void Snake_GameOver() {
