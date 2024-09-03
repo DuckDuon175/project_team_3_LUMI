@@ -13,10 +13,8 @@
 #define GRID_WIDTH     	  15
 #define GRID_HEIGHT       12
 #define SNAKE_MAX_LENGTH  (GRID_WIDTH * GRID_HEIGHT)
-#define ARENA_OFFSET_X 0
-#define ARENA_OFFSET_Y 0
-
-
+#define ARENA_OFFSET_X    0
+#define ARENA_OFFSET_Y    0
 
 typedef enum {
     EVENT_EMPTY,
@@ -87,7 +85,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 1500, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
         	}
             case EVENT_OF_BUTTON_1_PRESS_LOGIC: // Di chuyển lên
                 if (snake.direction.y != 1) { // Ngăn di chuyển ngược hướng xuống
@@ -100,7 +98,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_2_PRESS_LOGIC: // Di chuyển trái
@@ -114,7 +112,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_4_PRESS_LOGIC: // Di chuyển phải
@@ -128,7 +126,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_5_PRESS_LOGIC: // Di chuyển xuống
@@ -142,7 +140,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             default:
