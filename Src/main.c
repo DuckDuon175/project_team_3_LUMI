@@ -13,8 +13,8 @@
 #define GRID_WIDTH     	  15
 #define GRID_HEIGHT       12
 #define SNAKE_MAX_LENGTH  (GRID_WIDTH * GRID_HEIGHT)
-#define ARENA_OFFSET_X 0
-#define ARENA_OFFSET_Y 0
+#define ARENA_OFFSET_X    0
+#define ARENA_OFFSET_Y    0
 
 typedef enum {
     EVENT_EMPTY,
@@ -149,8 +149,8 @@ void DeviceStateMachine(uint8_t event) {
     }
 
     if (!gameOverFlag) {
-        Frame_Draw(); 
-        Snake_Draw();
+        Frame_Draw();  // Draw the frame, food, and score
+        Snake_Draw();  // Draw the snake
         if (Snake_CheckCollision()) {
             Snake_GameOver();
         }
@@ -175,8 +175,8 @@ void Snake_Init() {
 }
 void platform_drawCell(uint16_t x, uint16_t y)
 {
-    uint16_t x_new= ARENA_OFFSET_X + x*8;	//tọa độ x của cell snake
-    uint16_t y_new= ARENA_OFFSET_Y + y*8;	//tọa độ y của cell snake
+    uint16_t x_new= ARENA_OFFSET_X + x*8;//tọa độ x của cell snake
+    uint16_t y_new= ARENA_OFFSET_Y + y*8;//tọa độ y của cell snake
     for(uint8_t idx = x_new; idx < x_new + 8; idx++){
         ucg_DrawPixel(&ucg, idx, y_new);
     }
@@ -184,7 +184,7 @@ void platform_drawCell(uint16_t x, uint16_t y)
         ucg_DrawPixel(&ucg, x_new, idx);
     }
     for(uint8_t idx = x_new; idx < x_new + 8; idx++){
-        ucg_DrawPixel(&ucg, idx, y_new + 8 - 1);
+        ucg_DrawPixel(&ucg, idx, y_new + 8-1);
     }
     for(uint8_t idx = y_new; idx < y_new + 8; idx++){
         ucg_DrawPixel(&ucg, x_new + 8 - 1, idx);
@@ -195,8 +195,10 @@ void platform_eraseCell(uint16_t x, uint16_t y)
     uint16_t x_new= ARENA_OFFSET_X + x*8; // tọa độ x đặt cell snake
     uint16_t y_new= ARENA_OFFSET_Y + y*8; // tọa độ y đặt cell snake
 
+    // Set color to black (or the background color)
     ucg_SetColor(&ucg, 0, 0, 0, 0);
 
+    // Draw a filled box to cover the entire cell
     ucg_DrawBox(&ucg, x_new, y_new, 8, 8);
 
     // Reset the color to the snake color for future drawing
@@ -256,7 +258,7 @@ void Snake_MoveHandler(void *args) {
 
 void Snake_GenerateFood() {
     int validPosition = 0;
-    ucg_SetColor(&ucg, 255, 255, 255, 255);
+    ucg_SetColor(&ucg, 255, 255, 255, 255); // Đảm bảo màu trắng
     // Vòng lặp tiếp tục cho đến khi tìm được vị trí hợp lệ cho thức ăn
     while (!validPosition) {
         food.x = rand() % GRID_WIDTH;
@@ -271,19 +273,21 @@ void Snake_GenerateFood() {
             }
         }
     }
-
-    ucg_SetColor(&ucg, 255, 255, 255, 255);
+    // Vẽ thức ăn với màu trắng
+    ucg_SetColor(&ucg, 255, 255, 255, 255); // Đảm bảo màu trắng
     ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 7, 7);
 }
 
 
 
 int Snake_CheckCollision() {
+    // Check wall collision
     if (snake.position[0].x < 0 || snake.position[0].x >= GRID_WIDTH ||
         snake.position[0].y < 0 || snake.position[0].y >= GRID_HEIGHT) {
         return 1;
     }
 
+    // Check self collision
     for (int i = 1; i < snake.length; i++) {
         if (snake.position[0].x == snake.position[i].x &&
             snake.position[0].y == snake.position[i].y) {
@@ -303,9 +307,10 @@ void Frame_Draw() {
     ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * 8, GRID_HEIGHT * 8);
 
     // Vẽ thức ăn với màu trắng
-    ucg_SetColor(&ucg, 255, 255, 255, 255);
+    ucg_SetColor(&ucg, 255, 255, 255, 255); // Đảm bảo màu trắng cho thức ăn
     ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 7, 7);
 }
+
 
 void Snake_Draw() {
     int height = ucg_GetHeight(&ucg) / 10;
@@ -320,6 +325,8 @@ void Snake_Draw() {
     ucg_SetColor(&ucg, 255, 255, 255, 255); // Màu trắng cho điểm số
     ucg_DrawString(&ucg, 0, height + 108, 0, srcScore);
 }
+
+
 
 void Snake_GameOver() {
     // Xóa toàn bộ màn hình
