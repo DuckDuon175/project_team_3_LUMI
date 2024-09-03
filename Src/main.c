@@ -10,9 +10,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define GRID_WIDTH     	  16
-#define GRID_HEIGHT       10
+#define GRID_WIDTH     	  15
+#define GRID_HEIGHT       12
 #define SNAKE_MAX_LENGTH  (GRID_WIDTH * GRID_HEIGHT)
+#define ARENA_OFFSET_X 0
+#define ARENA_OFFSET_Y 0
 
 typedef enum {
     EVENT_EMPTY,
@@ -36,16 +38,6 @@ typedef struct {
     Point direction;
 } Snake;
 
-typedef struct {
-    uint16_t x;  // Tọa độ x của mỗi cell trên thân rắn
-    uint16_t y;  // Tọa độ y của mỗi cell trên thân rắn
-} cell_t;
-
-typedef struct {
-    cell_t body[SNAKE_MAX_LENGTH];  // Mảng lưu các cell tạo nên thân rắn
-    uint16_t length;  // Chiều dài của con rắn
-    cell_t ghost;  // Cell lưu vị trí cũ của đuôi rắn trước khi di chuyển
-} snake_t;
 
 static ucg_t ucg;
 static Snake snake;
@@ -59,10 +51,12 @@ static SSwTimer snakeMoveTimer = NO_TIMER;
 
 static void LoadConfiguration(void);
 void Snake_Init();
+int Snake_HasEaten();
 void Snake_Move();
 void Snake_MoveHandler(void *args);
 void Snake_GenerateFood();
 int Snake_CheckCollision();
+void Frame_Draw();
 void Snake_Draw();
 void Snake_GameOver();
 
@@ -91,7 +85,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 1500, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
         	}
             case EVENT_OF_BUTTON_1_PRESS_LOGIC: // Di chuyển lên
                 if (snake.direction.y != 1) { // Ngăn di chuyển ngược hướng xuống
@@ -104,7 +98,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_2_PRESS_LOGIC: // Di chuyển trái
@@ -118,7 +112,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_4_PRESS_LOGIC: // Di chuyển phải
@@ -132,7 +126,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             case EVENT_OF_BUTTON_5_PRESS_LOGIC: // Di chuyển xuống
@@ -146,7 +140,7 @@ void DeviceStateMachine(uint8_t event) {
         			TimerStop(snakeMoveTimer);
         			snakeMoveTimer = NO_TIMER;
         		}
-        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 2000, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
+        		snakeMoveTimer = TimerStart("Snake_MoveHandler", 800, TIMER_REPEAT_FOREVER, Snake_MoveHandler, NULL);
                 break;
 
             default:
@@ -155,13 +149,14 @@ void DeviceStateMachine(uint8_t event) {
     }
 
     if (!gameOverFlag) {
-        Snake_Move();
+        Frame_Draw(); 
         Snake_Draw();
         if (Snake_CheckCollision()) {
             Snake_GameOver();
         }
         isDirectionChanged = 0;
     }
+
 }
 
 void Snake_Init() {
@@ -178,37 +173,73 @@ void Snake_Init() {
     gameOverFlag = 0;
     score = 0;
 }
+void platform_drawCell(uint16_t x, uint16_t y)
+{
+    uint16_t x_new= ARENA_OFFSET_X + x*8;	//tọa độ x của cell snake
+    uint16_t y_new= ARENA_OFFSET_Y + y*8;	//tọa độ y của cell snake
+    for(uint8_t idx = x_new; idx < x_new + 8; idx++){
+        ucg_DrawPixel(&ucg, idx, y_new);
+    }
+    for(uint8_t idx = y_new; idx < y_new + 8; idx++){
+        ucg_DrawPixel(&ucg, x_new, idx);
+    }
+    for(uint8_t idx = x_new; idx < x_new + 8; idx++){
+        ucg_DrawPixel(&ucg, idx, y_new + 8 - 1);
+    }
+    for(uint8_t idx = y_new; idx < y_new + 8; idx++){
+        ucg_DrawPixel(&ucg, x_new + 8 - 1, idx);
+    }
+}
+void platform_eraseCell(uint16_t x, uint16_t y)
+{
+    uint16_t x_new= ARENA_OFFSET_X + x*8; // tọa độ x đặt cell snake
+    uint16_t y_new= ARENA_OFFSET_Y + y*8; // tọa độ y đặt cell snake
 
+    ucg_SetColor(&ucg, 0, 0, 0, 0);
+
+    ucg_DrawBox(&ucg, x_new, y_new, 8, 8);
+
+    // Reset the color to the snake color for future drawing
+    ucg_SetColor(&ucg, 0, 0, 255, 0);
+}
+int Snake_HasEaten() {
+    // Kiểm tra nếu đầu con rắn trùng với vị trí thức ăn
+    if (snake.position[0].x == food.x && snake.position[0].y == food.y) {
+        // Kéo dài con rắn nếu chưa đạt chiều dài tối đa
+        if (snake.length < SNAKE_MAX_LENGTH) {
+            // Lưu đoạn đuôi cũ để thêm vào cuối
+            Point oldTail = snake.position[snake.length - 1];
+            snake.position[snake.length] = oldTail;
+            snake.length++;
+        }
+        // Tăng điểm số
+        score++;
+
+        // Tạo thức ăn mới
+        Snake_GenerateFood();
+
+        return 1; // Rắn đã ăn thức ăn
+    }
+    return 0; // Rắn không ăn thức ăn
+}
 void Snake_Move() {
-    Point lastSegment = snake.position[snake.length - 1];
-
+    // Lưu vị trí đuôi cũ để xóa
+    Point oldTail = snake.position[snake.length - 1];
+    // Di chuyển các đoạn thân rắn lên phía trước;
     for (int i = snake.length - 1; i > 0; i--) {
         snake.position[i] = snake.position[i - 1];
     }
 
+    // Cập nhật vị trí đầu của rắn theo hướng di chuyển
     snake.position[0].x += snake.direction.x;
     snake.position[0].y += snake.direction.y;
 
-    // Kiểm tra nếu rắn chạm biên và đưa nó về phía đối diện
-    if (snake.position[0].x < 0) {
-        snake.position[0].x = GRID_WIDTH - 1;
-    } else if (snake.position[0].x >= GRID_WIDTH) {
-        snake.position[0].x = 0;
-    }
-
-    if (snake.position[0].y < 0) {
-        snake.position[0].y = GRID_HEIGHT + 2;
-    } else if (snake.position[0].y >= GRID_HEIGHT + 3) {
-        snake.position[0].y = 0;
-    }
-
-    if (snake.position[0].x == food.x && snake.position[0].y == food.y) {
-        if (snake.length < SNAKE_MAX_LENGTH) {
-            snake.position[snake.length] = lastSegment;
-            snake.length++;
-        }
-        score++;
-        Snake_GenerateFood();
+    // Kiểm tra nếu rắn ăn thức ăn
+    if (Snake_HasEaten()) {
+        return;
+    } else {
+        // Xóa đoạn đuôi cũ sau khi rắn di chuyển
+        platform_eraseCell(oldTail.x, oldTail.y);
     }
 }
 
@@ -225,7 +256,7 @@ void Snake_MoveHandler(void *args) {
 
 void Snake_GenerateFood() {
     int validPosition = 0;
-
+    ucg_SetColor(&ucg, 255, 255, 255, 255);
     // Vòng lặp tiếp tục cho đến khi tìm được vị trí hợp lệ cho thức ăn
     while (!validPosition) {
         food.x = rand() % GRID_WIDTH;
@@ -240,10 +271,19 @@ void Snake_GenerateFood() {
             }
         }
     }
+
+    ucg_SetColor(&ucg, 255, 255, 255, 255);
+    ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 7, 7);
 }
 
 
+
 int Snake_CheckCollision() {
+    if (snake.position[0].x < 0 || snake.position[0].x >= GRID_WIDTH ||
+        snake.position[0].y < 0 || snake.position[0].y >= GRID_HEIGHT) {
+        return 1;
+    }
+
     for (int i = 1; i < snake.length; i++) {
         if (snake.position[0].x == snake.position[i].x &&
             snake.position[0].y == snake.position[i].y) {
@@ -254,27 +294,31 @@ int Snake_CheckCollision() {
     return 0;
 }
 
-void Snake_Draw() {
-	int height = ucg_GetHeight(&ucg)/10;
-
+void Frame_Draw() {
     ucg_ClearScreen(&ucg);
     ucg_SetRotate180(&ucg);
 
-    ucg_SetColor(&ucg, 255, 255, 255, 255);
-    ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * 8, (GRID_HEIGHT + 3) *8);
+    // Vẽ khung
+    ucg_SetColor(&ucg, 255, 255, 255, 255); // Màu khung
+    ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * 8, GRID_HEIGHT * 8);
 
-    memset(srcScore, 0, sizeof(srcScore));
-    sprintf(srcScore, "Score: %d", score);
-    ucg_SetFont(&ucg, ucg_font_helvR08_tr);
+    // Vẽ thức ăn với màu trắng
     ucg_SetColor(&ucg, 255, 255, 255, 255);
-    ucg_DrawString(&ucg, 0, height + 108, 0, srcScore);
-
     ucg_DrawBox(&ucg, food.x * 8, food.y * 8, 7, 7);
+}
 
-    ucg_SetColor(&ucg, 0, 0, 255, 0);
+void Snake_Draw() {
+    int height = ucg_GetHeight(&ucg) / 10;
+    ucg_SetColor(&ucg, 0, 0, 255, 0); // Màu của con rắn
     for (int i = 0; i < snake.length; i++) {
         ucg_DrawBox(&ucg, snake.position[i].x * 8, snake.position[i].y * 8, 7, 7);
     }
+    ucg_SetColor(&ucg, 0, 255, 255, 255);
+    memset(srcScore, 0, sizeof(srcScore));
+    sprintf(srcScore, "Score: %d", score);
+    ucg_SetFont(&ucg, ucg_font_helvR08_tr);
+    ucg_SetColor(&ucg, 255, 255, 255, 255); // Màu trắng cho điểm số
+    ucg_DrawString(&ucg, 0, height + 108, 0, srcScore);
 }
 
 void Snake_GameOver() {
@@ -283,10 +327,6 @@ void Snake_GameOver() {
 
     // Đặt cờ gameOverFlag
     gameOverFlag = 1;
-
-    ucg_SetColor(&ucg, 255, 255, 255, 255);
-    ucg_DrawFrame(&ucg, 0, 0, GRID_WIDTH * 8, (GRID_HEIGHT + 3) *8);
-
     // Hiển thị thông báo "Game Over"
     ucg_SetFont(&ucg, ucg_font_helvR08_tr);
     ucg_SetRotate180(&ucg);
